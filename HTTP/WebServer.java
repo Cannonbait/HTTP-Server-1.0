@@ -50,14 +50,11 @@ final class HttpRequest implements Runnable
     final static String HTTPVERSION = "HTTP/1.0";
     final static String HOMEPAGE = "/index.html";
     final static String ROOTPATH = "root";
-    final static ArrayList<String> ALLOWED_OPERATIONS = new ArrayList<>();
-    final static ArrayList<String> IMPLEMENTED_OPERATIONS = new ArrayList<>();
     Socket socket;
 
     // Constructor
     public HttpRequest(Socket socket) throws Exception {
         this.socket = socket;
-        addOperations();
     }
 
     // Implements the run() method of the Runnable interface
@@ -113,7 +110,7 @@ final class HttpRequest implements Runnable
         }
 
         System.out.println(reqStrings[0]);
-        if(!IMPLEMENTED_OPERATIONS.contains(reqStrings[0])){
+        if(reqStrings[0].equals("POST")){
             str.append("501 Not Implemented" + CRLF);
             str.append(strDate() + CRLF);
             str.append(CRLF);
@@ -124,19 +121,13 @@ final class HttpRequest implements Runnable
         str.append(strDate() + CRLF);
         str.append("Location: " + reqStrings[1] + CRLF);
         str.append("Server: " + SERVER + CRLF);
+        str.append("Allow: GET, HEAD" + CRLF);
 
         str.append(CRLF);
         return str.toString();
 
     }
 
-    private static void addOperations(){
-        ALLOWED_OPERATIONS.add("POST");
-        ALLOWED_OPERATIONS.add("GET");
-        ALLOWED_OPERATIONS.add("HEAD");
-        IMPLEMENTED_OPERATIONS.add("GET");
-        IMPLEMENTED_OPERATIONS.add("HEAD");
-    }
 
     private static String strDate(){
         SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM d HH:mm:ss z yyyy");
@@ -160,7 +151,7 @@ final class HttpRequest implements Runnable
     }
 
     private static boolean generalHeader(String header){
-        return ALLOWED_OPERATIONS.contains(header);
+        return header.equals("POST") || header.equals("GET") || header.equals("HEAD");
     }
 
     private static boolean requestHeader(String request){
