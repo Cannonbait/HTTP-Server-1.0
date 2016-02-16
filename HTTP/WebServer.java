@@ -78,16 +78,14 @@ final class HttpRequest implements Runnable
         // Get the request line of the HTTP request
         String requestLine = br.readLine();
 
-        String str = handleRequest(requestLine);
+        handleRequest(requestLine, outs);
 
-        System.out.println(str.toString());
-        outs.writeBytes(str.toString());
         outs.close();
         br.close();
         socket.close();
     }
 
-    private String handleRequest(String requestLine) {
+    private void handleRequest(String requestLine, DataOutputStream outs) throws Exception{
 
         //String builder
         StringBuilder str = new StringBuilder();
@@ -97,7 +95,8 @@ final class HttpRequest implements Runnable
             str.append("400 Bad Request" + CRLF);
             str.append(strDate() + CRLF);
             str.append(CRLF);
-            return str.toString();
+            outs.writeBytes(str.toString());
+            return;
         }
 
         String[] reqStrings = requestLine.split(" ");
@@ -106,15 +105,16 @@ final class HttpRequest implements Runnable
             str.append("404 File not found" + CRLF);
             str.append(strDate() + CRLF);
             str.append(CRLF);
-            return str.toString();
+            outs.writeBytes(str.toString());
+            return;
         }
 
-        System.out.println(reqStrings[0]);
         if(reqStrings[0].equals("POST")){
             str.append("501 Not Implemented" + CRLF);
             str.append(strDate() + CRLF);
             str.append(CRLF);
-            return str.toString();
+            outs.writeBytes(str.toString());
+            return;
         }
 
         str.append("200 OK" + CRLF);
@@ -122,10 +122,17 @@ final class HttpRequest implements Runnable
         str.append("Location: " + reqStrings[1] + CRLF);
         str.append("Server: " + SERVER + CRLF);
         str.append("Allow: GET, HEAD" + CRLF);
-        str.append("Content-Type: " + contentType(reqStrings[1]));
+        str.append("Content-Lenght: " + f.length() + CRLF);
+        str.append("Content-Type: " + contentType(reqStrings[1]) + CRLF);
+        outs.writeBytes(str.toString());
 
-        str.append(CRLF);
-        return str.toString();
+        if (reqStrings[0].equals("GET")){
+            FileInputStream fis;
+            fis = new FileInputStream(f);
+            sendBytes(fis, outs);
+        }
+        outs.writeBytes(CRLF);
+        return;
 
     }
 
