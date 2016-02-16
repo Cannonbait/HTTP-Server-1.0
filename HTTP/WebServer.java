@@ -122,6 +122,7 @@ final class HttpRequest implements Runnable
         str.append("Location: " + reqStrings[1] + CRLF);
         str.append("Server: " + SERVER + CRLF);
         str.append("Allow: GET, HEAD" + CRLF);
+        str.append("Content-Type: " + contentType(reqStrings[1]));
 
         str.append(CRLF);
         return str.toString();
