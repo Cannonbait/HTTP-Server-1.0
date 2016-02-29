@@ -10,6 +10,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 
+/**
+ * Starts a WebServer with a randomised port, the port that the server binds to is printed in the terminal
+ * Awaits inbound TCP connections until terminated, for each inbound connection creates a new HttpRequest thread
+ */
 public final class WebServer
 {
     public static void main(String argv[]) throws Exception
@@ -31,8 +35,6 @@ public final class WebServer
             // Create an object to handle the request
             HttpRequest request  = new HttpRequest(requestSocket);
 
-            //request.run()
-
             // Create a new thread for the request
             Thread thread = new Thread(request);
 
@@ -42,6 +44,9 @@ public final class WebServer
     }
 }
 
+/**
+ * Handle a specific HTTP request
+ */
 final class HttpRequest implements Runnable
 {
     final static String CRLF = "\r\n";
@@ -78,8 +83,10 @@ final class HttpRequest implements Runnable
         // Get the request line of the HTTP request
         String requestLine = br.readLine();
 
+        //Handle request and send response
         handleRequest(requestLine, outs);
 
+        //Close things up
         outs.close();
         br.close();
         socket.close();
@@ -90,7 +97,10 @@ final class HttpRequest implements Runnable
         //String builder
         StringBuilder str = new StringBuilder();
 
+        //Always included
         str.append(HTTPVERSION + " ");
+
+        //Verify that request can be correctly parsed
         if (!validRequest(requestLine)){
             str.append("400 Bad Request" + CRLF);
             str.append(strDate() + CRLF);
@@ -99,6 +109,7 @@ final class HttpRequest implements Runnable
             return;
         }
 
+        //Verify that file exists
         String[] reqStrings = requestLine.split(" ");
         File f = new File(completeFilePath(reqStrings[1]));
         if(!f.exists() || f.isDirectory()){
@@ -109,6 +120,7 @@ final class HttpRequest implements Runnable
             return;
         }
 
+        //If request is of type POST, respond with not implemented
         if(reqStrings[0].equals("POST")){
             str.append("501 Not Implemented" + CRLF);
             str.append(strDate() + CRLF);
@@ -117,6 +129,7 @@ final class HttpRequest implements Runnable
             return;
         }
 
+        //Request appears ok, start crafting OK response
         str.append("200 OK" + CRLF);
         str.append(strDate() + CRLF);
         str.append("Location: " + reqStrings[1] + CRLF);
@@ -126,6 +139,7 @@ final class HttpRequest implements Runnable
         str.append("Content-Type: " + contentType(reqStrings[1]) + CRLF);
         outs.writeBytes(str.toString());
 
+        //If request was GET, include file contents
         if (reqStrings[0].equals("GET")){
             FileInputStream fis;
             fis = new FileInputStream(f);
@@ -133,47 +147,69 @@ final class HttpRequest implements Runnable
         }
         outs.writeBytes(CRLF);
         return;
-
     }
 
 
+    /**
+     * Creates a string with current timestamp in HTTP format
+     * @return date as a string
+     */
     private static String strDate(){
         SimpleDateFormat dateFormat = new SimpleDateFormat("EEE MMM d HH:mm:ss z yyyy");
         return("Date: " + dateFormat.format(new Date()));
     }
 
-    private static String completeFilePath(String filePath){
-        if (filePath.equals("/")){
+    /**
+     * Transforms URL into path to local file
+     * @param URLPath to be transformed
+     * @return path to local file
+     */
+    private static String completeFilePath(String URLPath){
+        if (URLPath.equals("/")){
             return ROOTPATH + HOMEPAGE;
         } else {
-            return ROOTPATH + filePath;
+            return ROOTPATH + URLPath;
         }
     }
 
-    private static boolean validRequest(String requestLine){
-        String[] reqStrings = requestLine.split(" ");
+    /**
+     * Checks that request consists of three parts and verifies each part of the request is correct
+     * @param request to be checked
+     * @return if request was correctly formed
+     */
+    private static boolean validRequest(String request){
+        String[] reqStrings = request.split(" ");
         if (reqStrings.length != 3){
             return false;
         }
         return generalHeader(reqStrings[0]) && requestHeader(reqStrings[1]) && entityHeader(reqStrings[2]);
     }
 
+    /**
+     * Verifies that general part of a request is correct
+     * @param header to be checked
+     */
     private static boolean generalHeader(String header){
         return header.equals("POST") || header.equals("GET") || header.equals("HEAD");
     }
 
-    private static boolean requestHeader(String request){
-        if (request.length() >= 1 && request.charAt(0) == '/'){
+    /**
+     * Verifies that URL part of request is correct
+     * @param uri to be checked
+     */
+    private static boolean requestHeader(String uri){
+        if (uri.length() >= 1 && uri.charAt(0) == '/'){
             return true;
         }
         return false;
     }
 
+    /**
+     * Verifies that entity matches set HTTP version of server
+     */
     private static boolean entityHeader(String header){
         return header.equals(HTTPVERSION);
     }
-
-
 
     private static void sendBytes(FileInputStream  fins,
                                   OutputStream     outs) throws Exception {
